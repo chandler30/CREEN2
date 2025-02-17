@@ -1,2 +1,2 @@
-unrar
 libarchive-dev
+unrar-free
