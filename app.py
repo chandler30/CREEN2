@@ -1,13 +1,28 @@
 import streamlit as st
 import os
 import re
-import rarfile
 import zipfile
 import shutil
 from tempfile import mkdtemp
 import io
+import subprocess
+import glob
 
 st.set_page_config(page_title="Buscador de Credenciales", layout="wide")
+
+def extraer_rar(ruta_rar, directorio_destino):
+    """Extrae un archivo RAR usando unrar-free"""
+    try:
+        subprocess.run(['unrar-free', 'x', ruta_rar, directorio_destino], 
+                      check=True, 
+                      capture_output=True)
+        return True
+    except subprocess.CalledProcessError as e:
+        st.error(f"Error al extraer RAR: {e}")
+        return False
+    except Exception as e:
+        st.error(f"Error inesperado: {e}")
+        return False
 
 def procesar_archivo_comprimido(archivo_subido, temp_dir):
     """Procesa un archivo RAR o ZIP y extrae solo los archivos .txt"""
@@ -25,10 +40,18 @@ def procesar_archivo_comprimido(archivo_subido, temp_dir):
         
         # Procesar según el tipo de archivo
         if nombre_archivo.lower().endswith('.rar'):
-            with rarfile.RarFile(temp_file_path) as rf:
-                for file in rf.namelist():
-                    if file.lower().endswith('.txt'):
-                        rf.extract(file, extracted_dir)
+            # Crear un subdirectorio temporal para la extracción RAR
+            rar_temp_dir = os.path.join(temp_dir, 'rar_temp')
+            os.makedirs(rar_temp_dir, exist_ok=True)
+            
+            # Extraer el RAR
+            if extraer_rar(temp_file_path, rar_temp_dir):
+                # Copiar solo los archivos .txt al directorio final
+                for txt_file in glob.glob(os.path.join(rar_temp_dir, '**/*.txt'), recursive=True):
+                    shutil.copy2(txt_file, extracted_dir)
+                # Limpiar directorio temporal RAR
+                shutil.rmtree(rar_temp_dir)
+            
         elif nombre_archivo.lower().endswith('.zip'):
             with zipfile.ZipFile(temp_file_path) as zf:
                 for file in zf.namelist():
