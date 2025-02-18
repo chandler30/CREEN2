@@ -10,12 +10,17 @@ import glob
 
 st.set_page_config(page_title="Buscador de Credenciales", layout="wide")
 
-def extraer_rar(ruta_rar, directorio_destino):
-    """Extrae un archivo RAR usando unrar-free"""
+def extraer_rar(ruta_rar, directorio_destino, password=None):
+    """Extrae un archivo RAR usando unrar-free o unrar con contraseña"""
     try:
-        subprocess.run(['unrar-free', 'x', ruta_rar, directorio_destino], 
-                      check=True, 
-                      capture_output=True)
+        if password:
+            subprocess.run(['unrar', 'x', '-p' + password, ruta_rar, directorio_destino], 
+                          check=True, 
+                          capture_output=True)
+        else:
+            subprocess.run(['unrar-free', 'x', ruta_rar, directorio_destino], 
+                          check=True, 
+                          capture_output=True)
         return True
     except subprocess.CalledProcessError as e:
         st.error(f"Error al extraer RAR: {e}")
@@ -24,7 +29,7 @@ def extraer_rar(ruta_rar, directorio_destino):
         st.error(f"Error inesperado: {e}")
         return False
 
-def procesar_archivo_comprimido(archivo_subido, temp_dir):
+def procesar_archivo_comprimido(archivo_subido, temp_dir, password=None):
     """Procesa un archivo RAR o ZIP y extrae solo los archivos .txt"""
     nombre_archivo = archivo_subido.name
     
@@ -45,7 +50,7 @@ def procesar_archivo_comprimido(archivo_subido, temp_dir):
             os.makedirs(rar_temp_dir, exist_ok=True)
             
             # Extraer el RAR
-            if extraer_rar(temp_file_path, rar_temp_dir):
+            if extraer_rar(temp_file_path, rar_temp_dir, password):
                 # Copiar solo los archivos .txt al directorio final
                 for txt_file in glob.glob(os.path.join(rar_temp_dir, '**/*.txt'), recursive=True):
                     shutil.copy2(txt_file, extracted_dir)
@@ -60,6 +65,11 @@ def procesar_archivo_comprimido(archivo_subido, temp_dir):
         
         # Eliminar el archivo temporal
         os.remove(temp_file_path)
+        
+        # Contar archivos .txt extraídos
+        txt_files_count = len(glob.glob(os.path.join(extracted_dir, '**/*.txt'), recursive=True))
+        st.write(f"Se encontraron {txt_files_count} archivos .txt en {nombre_archivo}")
+        
         return extracted_dir
         
     except Exception as e:
@@ -153,13 +163,14 @@ def main():
     )
     
     texto_busqueda = st.text_input("🔎 Ingresa el texto a buscar en las URLs (ej: google.com):")
+    password_rar = st.text_input("🔑 Ingresa la contraseña para archivos RAR (si aplica):", type="password")
     
     if archivos and texto_busqueda:
         total_resultados = 0
         
         with st.spinner("Procesando archivos..."):
             for archivo in archivos:
-                extracted_dir = procesar_archivo_comprimido(archivo, temp_dir)
+                extracted_dir = procesar_archivo_comprimido(archivo, temp_dir, password_rar)
                 
                 if extracted_dir:
                     resultados = buscar_credenciales(extracted_dir, texto_busqueda)
