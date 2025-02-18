@@ -69,9 +69,17 @@ def procesar_archivo_comprimido(temp_file_path, temp_dir, password=None):
         st.error(f"Error al procesar {nombre_archivo}: {str(e)}")
         return None
 
-def buscar_credenciales(directorio, texto_url):
-    """Busca credenciales en archivos .txt basándose en coincidencias de URL"""
+def buscar_credenciales_por_url(ruta_carpeta, texto_url):
+    """
+    Busca credenciales en archivos .txt basándose en coincidencias parciales de URL.
+
+    Args:
+        ruta_carpeta (str): Ruta del directorio con los archivos .txt
+        texto_url (str): Texto a buscar en las URLs (coincidencia parcial)
+    """
+
     resultados = []
+    # Patrones más flexibles para diferentes formatos
     patrones = {
         'url': [
             r"URL:\s*(.*?)\s*$",
@@ -91,54 +99,70 @@ def buscar_credenciales(directorio, texto_url):
             r"PASS\s*:\s*(.*?)\s*$"
         ]
     }
-    
+
+    # Compilar todos los patrones
     patrones_compilados = {
         tipo: [re.compile(p, re.IGNORECASE) for p in patterns]
         for tipo, patterns in patrones.items()
     }
 
     def encontrar_coincidencia(linea, tipo_patron):
+        """Busca coincidencias con cualquiera de los patrones del tipo especificado"""
         for patron in patrones_compilados[tipo_patron]:
             coincidencia = patron.search(linea)
             if coincidencia:
                 return coincidencia.group(1)
         return None
 
-    for root, _, files in os.walk(directorio):
-        for file in files:
-            if file.endswith('.txt'):
-                ruta_archivo = os.path.join(root, file)
-                try:
-                    with open(ruta_archivo, 'r', encoding='utf-8', errors='ignore') as f:
-                        lineas = f.readlines()
-                    
-                    i = 0
-                    while i < len(lineas):
-                        url = encontrar_coincidencia(lineas[i], 'url')
-                        if url and texto_url.lower() in url.lower():
-                            usuario = None
-                            password = None
-                            
-                            # Buscar credenciales en las siguientes líneas
-                            for j in range(i, min(i + 5, len(lineas))):
-                                if not usuario:
-                                    usuario = encontrar_coincidencia(lineas[j], 'usuario')
-                                if not password:
-                                    password = encontrar_coincidencia(lineas[j], 'password')
-                            
-                            if usuario and password:
-                                resultados.append({
-                                    "archivo": file,
-                                    "url": url,
-                                    "usuario": usuario,
-                                    "password": password
-                                })
-                        i += 1
-                        
-                except Exception as e:
-                    st.warning(f"Error al procesar {file}: {str(e)}")
-    
-    return resultados
+    # Verificar si la carpeta existe
+    if not os.path.exists(ruta_carpeta):
+        print(f"Error: La carpeta {ruta_carpeta} no existe.")
+        return
+
+    for archivo in os.listdir(ruta_carpeta):
+        if archivo.endswith(".txt"):
+            ruta_archivo = os.path.join(ruta_carpeta, archivo)
+            try:
+                with open(ruta_archivo, "r", encoding="utf-8") as f:
+                    lineas = f.readlines()
+
+                i = 0
+                while i < len(lineas):
+                    # Buscar URL
+                    url = encontrar_coincidencia(lineas[i], 'url')
+                    if url and texto_url.lower() in url.lower():
+                        # Buscar credenciales en las siguientes líneas
+                        usuario = None
+                        password = None
+                        for j in range(i, min(i + 5, len(lineas))):  # Buscar en las próximas 5 líneas
+                            if not usuario:
+                                usuario = encontrar_coincidencia(lineas[j], 'usuario')
+                            if not password:
+                                password = encontrar_coincidencia(lineas[j], 'password')
+
+                        if usuario and password:
+                            resultados.append({
+                                "archivo": archivo,
+                                "url": url,
+                                "usuario": usuario,
+                                "password": password
+                            })
+                    i += 1
+
+            except Exception as e:
+                print(f"Error al procesar el archivo {archivo}: {e}")
+
+    # Mostrar resultados en Streamlit
+    if resultados:
+        st.write(f"\nSe encontraron {len(resultados)} coincidencias para '{texto_url}':")
+        for resultado in resultados:
+            st.markdown("\n" + "="*50)
+            st.write(f"Archivo: {resultado['archivo']}")
+            st.write(f"URL: {resultado['url']}")
+            st.write(f"Usuario: {resultado['usuario']}")
+            st.write(f"Contraseña: {resultado['password']}")
+    else:
+        st.write(f"\nNo se encontraron credenciales para '{texto_url}' en la carpeta {ruta_carpeta}")
 
 def main():
     st.title("🔍 Buscador de Credenciales")
@@ -186,39 +210,11 @@ def main():
                 if txt_dir:
                     st.success("Archivos .txt extraídos exitosamente.")
                     
-    if texto_busqueda:
+    if texto_busqueda and extracted_dir:
         total_resultados = 0
         
         with st.spinner("Buscando credenciales..."):
-            resultados = buscar_credenciales(os.path.join(temp_dir, 'extracted'), texto_busqueda)
-            total_resultados += len(resultados)
-            
-            if resultados:
-                st.success(f"Se encontraron {len(resultados)} coincidencias")
-                
-                # Mostrar resultados en una tabla expandible
-                for resultado in resultados:
-                    with st.expander(f"Ver resultados de {resultado['archivo']}"):
-                        st.markdown("""---""")
-                        col1, col2, col3 = st.columns(3)
-                        with col1:
-                            st.write("**Archivo:**", resultado['archivo'])
-                        with col2:
-                            st.write("**URL:**", resultado['url'])
-                        with col3:
-                            st.write("**Usuario:**", resultado['usuario'])
-                            st.write("**Contraseña:**", resultado['password'])
-            else:
-                st.info("No se encontraron coincidencias")
-        
-        if total_resultados > 0:
-            st.markdown(f"### Total de coincidencias encontradas: {total_resultados}")
-        
-        # Limpiar archivos temporales
-        try:
-            shutil.rmtree(temp_dir)
-        except Exception as e:
-            st.error(f"Error al limpiar archivos temporales: {str(e)}")
+            buscar_credenciales_por_url(os.path.join(temp_dir, 'extracted'), texto_busqueda)
 
 if __name__ == "__main__":
     main()
