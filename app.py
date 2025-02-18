@@ -43,8 +43,10 @@ if archivo_subido and password:
         archivos_encontrados = buscar_archivos(carpeta_destino, output_folder)
         if archivos_encontrados:
             st.write("Archivos de contraseñas encontrados y copiados:")
-            st.write(archivos_encontrados)
+            for archivo in archivos_encontrados:
+                st.write(archivo)
         else:
             st.write("No se encontraron archivos de contraseñas.")
     
     os.remove("temp.rar")
+    shutil.rmtree(carpeta_destino)
