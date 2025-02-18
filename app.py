@@ -4,7 +4,6 @@ import re
 import zipfile
 import shutil
 from tempfile import mkdtemp
-import io
 import subprocess
 import glob
 
@@ -29,19 +28,14 @@ def extraer_rar(ruta_rar, directorio_destino, password=None):
         st.error(f"Error inesperado: {e}")
         return False
 
-def procesar_archivo_comprimido(archivo_subido, temp_dir, password=None):
+def procesar_archivo_comprimido(temp_file_path, temp_dir, password=None):
     """Procesa un archivo RAR o ZIP y extrae solo los archivos .txt"""
-    nombre_archivo = archivo_subido.name
+    nombre_archivo = os.path.basename(temp_file_path)
     
     try:
         # Crear directorio para los archivos extraídos
         extracted_dir = os.path.join(temp_dir, 'extracted')
         os.makedirs(extracted_dir, exist_ok=True)
-        
-        # Guardar temporalmente el archivo
-        temp_file_path = os.path.join(temp_dir, nombre_archivo)
-        with open(temp_file_path, 'wb') as f:
-            f.write(archivo_subido.getvalue())
         
         # Procesar según el tipo de archivo
         if nombre_archivo.lower().endswith('.rar'):
@@ -62,9 +56,6 @@ def procesar_archivo_comprimido(archivo_subido, temp_dir, password=None):
                 for file in zf.namelist():
                     if file.lower().endswith('.txt'):
                         zf.extract(file, extracted_dir)
-        
-        # Eliminar el archivo temporal
-        os.remove(temp_file_path)
         
         # Contar archivos .txt extraídos
         txt_files_count = len(glob.glob(os.path.join(extracted_dir, '**/*.txt'), recursive=True))
@@ -159,49 +150,58 @@ def main():
     archivos = st.file_uploader(
         "Arrastra aquí tus archivos", 
         type=['rar', 'zip'],
-        accept_multiple_files=True
+        accept_multiple_files=False
     )
     
     texto_busqueda = st.text_input("🔎 Ingresa el texto a buscar en las URLs (ej: google.com):")
     password_rar = st.text_input("🔑 Ingresa la contraseña para archivos RAR (si aplica):", type="password")
     
-    if archivos and texto_busqueda:
-        total_resultados = 0
-        
-        with st.spinner("Procesando archivos..."):
-            for archivo in archivos:
-                extracted_dir = procesar_archivo_comprimido(archivo, temp_dir, password_rar)
+    if archivos:
+        st.write("### 🛠️ Opciones de Procesamiento")
+        if st.button('Descomprimir Temporalmente'):
+            with st.spinner("Descomprimiendo archivo..."):
+                temp_file_path = os.path.join(temp_dir, archivos.name)
+                with open(temp_file_path, 'wb') as f:
+                    f.write(archivos.getvalue())
+                
+                extracted_dir = procesar_archivo_comprimido(temp_file_path, temp_dir, password_rar)
                 
                 if extracted_dir:
-                    resultados = buscar_credenciales(extracted_dir, texto_busqueda)
-                    total_resultados += len(resultados)
+                    st.success("Archivo descomprimido exitosamente.")
                     
-                    if resultados:
-                        st.success(f"Se encontraron {len(resultados)} coincidencias en {archivo.name}")
-                        
-                        # Mostrar resultados en una tabla expandible
-                        with st.expander(f"Ver resultados de {archivo.name}"):
-                            for resultado in resultados:
-                                st.markdown("""---""")
-                                col1, col2, col3 = st.columns(3)
-                                with col1:
-                                    st.write("**Archivo:**", resultado['archivo'])
-                                with col2:
-                                    st.write("**URL:**", resultado['url'])
-                                with col3:
-                                    st.write("**Usuario:**", resultado['usuario'])
-                                    st.write("**Contraseña:**", resultado['password'])
-                    else:
-                        st.info(f"No se encontraron coincidencias en {archivo.name}")
+    if texto_busqueda:
+        total_resultados = 0
+        
+        with st.spinner("Buscando credenciales..."):
+            resultados = buscar_credenciales(os.path.join(temp_dir, 'extracted'), texto_busqueda)
+            total_resultados += len(resultados)
             
-            if total_resultados > 0:
-                st.markdown(f"### Total de coincidencias encontradas: {total_resultados}")
-            
-            # Limpiar archivos temporales
-            try:
-                shutil.rmtree(temp_dir)
-            except Exception as e:
-                st.error(f"Error al limpiar archivos temporales: {str(e)}")
+            if resultados:
+                st.success(f"Se encontraron {len(resultados)} coincidencias")
+                
+                # Mostrar resultados en una tabla expandible
+                for resultado in resultados:
+                    with st.expander(f"Ver resultados de {resultado['archivo']}"):
+                        st.markdown("""---""")
+                        col1, col2, col3 = st.columns(3)
+                        with col1:
+                            st.write("**Archivo:**", resultado['archivo'])
+                        with col2:
+                            st.write("**URL:**", resultado['url'])
+                        with col3:
+                            st.write("**Usuario:**", resultado['usuario'])
+                            st.write("**Contraseña:**", resultado['password'])
+            else:
+                st.info("No se encontraron coincidencias")
+        
+        if total_resultados > 0:
+            st.markdown(f"### Total de coincidencias encontradas: {total_resultados}")
+        
+        # Limpiar archivos temporales
+        try:
+            shutil.rmtree(temp_dir)
+        except Exception as e:
+            st.error(f"Error al limpiar archivos temporales: {str(e)}")
 
 if __name__ == "__main__":
     main()
