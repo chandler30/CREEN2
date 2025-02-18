@@ -167,10 +167,10 @@ def main():
                     f.write(archivos.getvalue())
                 
                 extracted_dir = None
-                with st.progress(100) as progress:
-                    for i in range(100):
-                        sleep(0.1)  # Simulate work being done
-                        progress.progress(i + 1)
+                progress_bar = st.progress(0)
+                for i in range(100):
+                    sleep(0.1)  # Simulate work being done
+                    progress_bar.progress(i + 1)
                 
                 success, result = extraer_rar(temp_file_path, temp_dir, password_rar)
                 if success:
