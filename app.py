@@ -30,32 +30,51 @@ def extraer_rar(ruta_rar, directorio_destino, password=None):
     except Exception as e:
         return False, f"Error inesperado: {str(e)}"
 
-def copiar_archivos_txt(origen, destino):
-    """Copia todos los archivos .txt encontrados recursivamente"""
-    contador = 0
-    for root, _, files in os.walk(origen):
-        for file in files:
-            if file.lower().endswith('.txt'):
-                ruta_origen = os.path.join(root, file)
-                nombre_nuevo = f"archivo_{contador}.txt"
-                ruta_destino = os.path.join(destino, nombre_nuevo)
+def copiar_archivos_passwords(directorio_origen, directorio_destino):
+    """
+    Copia archivos específicos de contraseñas a un directorio numerado
+    """
+    # Lista de nombres de archivo a buscar
+    archivos_objetivo = ['password.txt', 'passwords.txt', 'PASSWORDS.txt', 'Passwords.txt']
+    
+    # Crear directorio de destino numerado
+    if not os.path.exists(directorio_destino):
+        os.makedirs(directorio_destino)
+    else:
+        i = 1
+        while os.path.exists(f"{directorio_destino}{i}"):
+            i += 1
+        directorio_destino = f"{directorio_destino}{i}"
+        os.makedirs(directorio_destino)
+    
+    # Contador para archivos encontrados
+    archivos_encontrados = 0
+    
+    # Recorrer el directorio de origen
+    for root, _, files in os.walk(directorio_origen):
+        for filename in files:
+            if filename.lower() in [f.lower() for f in archivos_objetivo]:
+                ruta_origen = os.path.join(root, filename)
+                nuevo_nombre = f"password{archivos_encontrados + 1}.txt"
+                ruta_destino = os.path.join(directorio_destino, nuevo_nombre)
+                
                 try:
                     shutil.copy2(ruta_origen, ruta_destino)
-                    contador += 1
+                    archivos_encontrados += 1
                 except Exception as e:
-                    st.error(f"Error al copiar {file}: {str(e)}")
-    return contador
+                    st.error(f"Error al copiar {filename}: {str(e)}")
+    
+    return archivos_encontrados, directorio_destino
 
 def procesar_archivo_comprimido(temp_file_path, temp_dir, password=None):
-    """Procesa un archivo RAR o ZIP y extrae los archivos .txt"""
+    """Procesa un archivo RAR o ZIP y extrae los archivos de contraseñas"""
     nombre_archivo = os.path.basename(temp_file_path)
     
     try:
-        # Crear directorios para los archivos
+        # Crear directorio para extracción inicial
         extracted_dir = os.path.join(temp_dir, 'extracted')
-        txt_dir = os.path.join(temp_dir, 'txt_files')
+        passwords_dir = os.path.join(temp_dir, 'PASSWORD')
         os.makedirs(extracted_dir, exist_ok=True)
-        os.makedirs(txt_dir, exist_ok=True)
         
         # Procesar según el tipo de archivo
         if nombre_archivo.lower().endswith('.rar'):
@@ -67,11 +86,15 @@ def procesar_archivo_comprimido(temp_file_path, temp_dir, password=None):
             with zipfile.ZipFile(temp_file_path) as zf:
                 zf.extractall(extracted_dir)
         
-        # Copiar archivos .txt al directorio final
-        archivos_copiados = copiar_archivos_txt(extracted_dir, txt_dir)
-        st.success(f"Se encontraron y copiaron {archivos_copiados} archivos .txt")
+        # Copiar archivos de contraseñas
+        num_archivos, dir_final = copiar_archivos_passwords(extracted_dir, passwords_dir)
         
-        return txt_dir
+        if num_archivos > 0:
+            st.success(f"Se encontraron y copiaron {num_archivos} archivos de contraseñas")
+            return dir_final
+        else:
+            st.warning("No se encontraron archivos de contraseñas")
+            return None
         
     except Exception as e:
         st.error(f"Error al procesar {nombre_archivo}: {str(e)}")
@@ -135,7 +158,7 @@ def buscar_credenciales_por_url(ruta_carpeta, texto_url):
                             if not password:
                                 password = encontrar_coincidencia(lineas[j], 'password')
 
-                        if usuario or password:  # Changed to 'or' to be more flexible
+                        if usuario or password:
                             resultados.append({
                                 "archivo": archivo,
                                 "url": url,
@@ -184,9 +207,9 @@ def main():
                     sleep(0.01)
                     progress_bar.progress(i + 1)
                 
-                txt_dir = procesar_archivo_comprimido(temp_file_path, temp_dir, password_rar)
-                if txt_dir and texto_busqueda:
-                    buscar_credenciales_por_url(txt_dir, texto_busqueda)
+                passwords_dir = procesar_archivo_comprimido(temp_file_path, temp_dir, password_rar)
+                if passwords_dir and texto_busqueda:
+                    buscar_credenciales_por_url(passwords_dir, texto_busqueda)
 
 if __name__ == "__main__":
     main()
