@@ -6,6 +6,7 @@ import shutil
 from tempfile import mkdtemp
 import subprocess
 import glob
+from time import sleep
 
 st.set_page_config(page_title="Buscador de Credenciales", layout="wide")
 
@@ -13,20 +14,20 @@ def extraer_rar(ruta_rar, directorio_destino, password=None):
     """Extrae un archivo RAR usando unrar-free o unrar con contraseña"""
     try:
         if password:
-            subprocess.run(['unrar', 'x', '-p' + password, ruta_rar, directorio_destino], 
+            result = subprocess.run(['unrar', 'x', '-p' + password, ruta_rar, directorio_destino], 
                           check=True, 
                           capture_output=True)
         else:
-            subprocess.run(['unrar-free', 'x', ruta_rar, directorio_destino], 
+            result = subprocess.run(['unrar-free', 'x', ruta_rar, directorio_destino], 
                           check=True, 
                           capture_output=True)
-        return True
+        return True, result
     except subprocess.CalledProcessError as e:
         st.error(f"Error al extraer RAR: {e}")
-        return False
+        return False, e
     except Exception as e:
         st.error(f"Error inesperado: {e}")
-        return False
+        return False, e
 
 def procesar_archivo_comprimido(temp_file_path, temp_dir, password=None):
     """Procesa un archivo RAR o ZIP y extrae solo los archivos .txt"""
@@ -44,7 +45,8 @@ def procesar_archivo_comprimido(temp_file_path, temp_dir, password=None):
             os.makedirs(rar_temp_dir, exist_ok=True)
             
             # Extraer el RAR
-            if extraer_rar(temp_file_path, rar_temp_dir, password):
+            success, result = extraer_rar(temp_file_path, rar_temp_dir, password)
+            if success:
                 # Copiar solo los archivos .txt al directorio final
                 for txt_file in glob.glob(os.path.join(rar_temp_dir, '**/*.txt'), recursive=True):
                     shutil.copy2(txt_file, extracted_dir)
@@ -164,10 +166,24 @@ def main():
                 with open(temp_file_path, 'wb') as f:
                     f.write(archivos.getvalue())
                 
-                extracted_dir = procesar_archivo_comprimido(temp_file_path, temp_dir, password_rar)
+                extracted_dir = None
+                with st.progress(100) as progress:
+                    for i in range(100):
+                        sleep(0.1)  # Simulate work being done
+                        progress.progress(i + 1)
                 
-                if extracted_dir:
+                success, result = extraer_rar(temp_file_path, temp_dir, password_rar)
+                if success:
                     st.success("Archivo descomprimido exitosamente.")
+                    extracted_dir = temp_dir
+                else:
+                    st.error(f"Error al descomprimir el archivo: {result}")
+        
+        if extracted_dir and st.button('Extraer .txt'):
+            with st.spinner("Extrayendo archivos .txt..."):
+                txt_dir = procesar_archivo_comprimido(temp_file_path, temp_dir, password_rar)
+                if txt_dir:
+                    st.success("Archivos .txt extraídos exitosamente.")
                     
     if texto_busqueda:
         total_resultados = 0
