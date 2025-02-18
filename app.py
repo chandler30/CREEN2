@@ -158,6 +158,8 @@ def main():
     texto_busqueda = st.text_input("🔎 Ingresa el texto a buscar en las URLs (ej: google.com):")
     password_rar = st.text_input("🔑 Ingresa la contraseña para archivos RAR (si aplica):", type="password")
     
+    extracted_dir = None  # Initialize extracted_dir here
+    
     if archivos:
         st.write("### 🛠️ Opciones de Procesamiento")
         if st.button('Descomprimir Temporalmente'):
@@ -166,7 +168,6 @@ def main():
                 with open(temp_file_path, 'wb') as f:
                     f.write(archivos.getvalue())
                 
-                extracted_dir = None
                 progress_bar = st.progress(0)
                 for i in range(100):
                     sleep(0.1)  # Simulate work being done
