@@ -19,63 +19,95 @@ def parse_lines(lines):
             data.append({"URL": url, "Usuario": user, "Contraseña": password})
     return data
 
-# Función mejorada para generar un botón de copiar con JavaScript y CSS responsive
-def copy_button(text, label):
-    return f"""
-    <button onclick="navigator.clipboard.writeText('{text}')"
-    style="background-color: #4CAF50; 
-           color: white; 
-           border: none; 
-           padding: 5px 10px; 
-           border-radius: 4px;
-           cursor: pointer; 
-           font-size: 12px; 
-           margin: 2px 0;
-           white-space: nowrap;
-           display: inline-block;">
-        📋 {label}
-    </button>
-    """
-
-# CSS personalizado para mejorar la responsividad
-st.markdown("""
-<style>
-    .credential-box {
-        border: 1px solid #ddd;
-        padding: 10px;
-        margin-bottom: 10px;
-        border-radius: 5px;
-        background-color: white;
-        word-wrap: break-word;
-    }
-    .credential-item {
-        margin: 5px 0;
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 8px;
-    }
-    .credential-label {
-        font-weight: bold;
-        margin-right: 5px;
-        white-space: nowrap;
-    }
-    .credential-value {
-        word-break: break-all;
-        flex: 1;
-        min-width: 150px;
-    }
-    @media (max-width: 640px) {
-        .credential-item {
-            flex-direction: column;
-            align-items: flex-start;
+def create_table_html(results):
+    html = """
+    <style>
+        .custom-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1rem;
+            background-color: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .custom-table tr {
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .custom-table tr:last-child {
+            border-bottom: none;
+        }
+        .custom-table td {
+            padding: 12px;
+            vertical-align: middle;
+        }
+        .custom-table .url-cell {
+            word-break: break-all;
+            color: #1a73e8;
+        }
+        .custom-table .copy-button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-left: 8px;
+            white-space: nowrap;
         }
         .credential-value {
-            width: 100%;
+            font-family: monospace;
+            background-color: #f8f9fa;
+            padding: 4px 8px;
+            border-radius: 4px;
+            display: inline-block;
         }
-    }
-</style>
-""", unsafe_allow_html=True)
+        @media (max-width: 640px) {
+            .custom-table td {
+                display: block;
+                padding: 8px 12px;
+            }
+            .custom-table td:before {
+                content: attr(data-label);
+                font-weight: bold;
+                display: block;
+                margin-bottom: 4px;
+            }
+            .credential-value {
+                display: inline-block;
+                margin-right: 8px;
+            }
+        }
+    </style>
+    """
+    
+    for cred in results:
+        html += f"""
+        <table class="custom-table">
+            <tr>
+                <td data-label="URL" class="url-cell">{cred["URL"]}</td>
+            </tr>
+            <tr>
+                <td data-label="Usuario">
+                    <span class="credential-value">{cred["Usuario"]}</span>
+                    <button class="copy-button" onclick="navigator.clipboard.writeText('{cred["Usuario"]}')" >
+                        📋 Copiar Usuario
+                    </button>
+                </td>
+            </tr>
+            <tr>
+                <td data-label="Contraseña">
+                    <span class="credential-value">{cred["Contraseña"]}</span>
+                    <button class="copy-button" onclick="navigator.clipboard.writeText('{cred["Contraseña"]}')" >
+                        📋 Copiar Contraseña
+                    </button>
+                </td>
+            </tr>
+        </table>
+        <div style="height: 16px"></div>
+        """
+    return html
 
 st.title("🔍 Buscador de Credenciales en TXT")
 
@@ -97,25 +129,7 @@ if uploaded_file:
         if results:
             st.success(f"✅ Se encontraron {len(results)} coincidencias:")
             
-            # Mostrar cada resultado en un contenedor responsive
-            for cred in results:
-                st.markdown(f"""
-                    <div class="credential-box">
-                        <div class="credential-item">
-                            <span class="credential-label">🔗 URL:</span>
-                            <span class="credential-value">{cred["URL"]}</span>
-                        </div>
-                        <div class="credential-item">
-                            <span class="credential-label">👤 Usuario:</span>
-                            <span class="credential-value">{cred["Usuario"]}</span>
-                            {copy_button(cred["Usuario"], "Copiar")}
-                        </div>
-                        <div class="credential-item">
-                            <span class="credential-label">🔑 Contraseña:</span>
-                            <span class="credential-value">{cred["Contraseña"]}</span>
-                            {copy_button(cred["Contraseña"], "Copiar")}
-                        </div>
-                    </div>
-                """, unsafe_allow_html=True)
+            # Mostrar resultados usando la nueva función de tabla HTML
+            st.markdown(create_table_html(results), unsafe_allow_html=True)
         else:
             st.warning("⚠️ No se encontraron coincidencias.")
