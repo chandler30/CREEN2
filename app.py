@@ -1,6 +1,9 @@
 import streamlit as st
 import pandas as pd
 
+# Configuración de la aplicación - DEBE SER LA PRIMERA LLAMADA A STREAMLIT
+st.set_page_config(page_title="Buscador de Credenciales", layout="wide")
+
 def parse_lines(lines):
     data = []
     for line in lines:
@@ -74,8 +77,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Configuración de la aplicación
-st.set_page_config(page_title="Buscador de Credenciales", layout="wide")
 st.title("🔍 Buscador de Credenciales en TXT")
 
 # Subir archivo .txt
