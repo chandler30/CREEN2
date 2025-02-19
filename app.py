@@ -1,4 +1,6 @@
 import streamlit as st
+import pandas as pd
+import pyperclip  # Para copiar al portapapeles
 
 # Función para parsear las líneas del archivo
 def parse_lines(lines):
@@ -17,6 +19,11 @@ def parse_lines(lines):
             data.append({"URL": url, "Usuario": user, "Contraseña": password})
     
     return data
+
+# Función para copiar texto al portapapeles
+def copy_to_clipboard(text):
+    pyperclip.copy(text)
+    st.toast(f"Copiado: {text}")
 
 # Configuración de la aplicación
 st.set_page_config(page_title="Buscador de Credenciales", layout="wide")
@@ -39,64 +46,23 @@ if uploaded_file:
 
         if results:
             st.success(f"✅ Se encontraron {len(results)} coincidencias:")
-            
-            # Estilos para hacer la tabla más amigable en móviles
-            st.markdown("""
-            <style>
-                .result-table {
-                    width: 100%;
-                    border-collapse: collapse;
-                }
-                .result-table th, .result-table td {
-                    padding: 10px;
-                    text-align: left;
-                    border-bottom: 1px solid #ddd;
-                    font-size: 14px;
-                }
-                .copy-btn {
-                    background-color: #4CAF50;
-                    color: white;
-                    border: none;
-                    padding: 5px 10px;
-                    margin-left: 10px;
-                    cursor: pointer;
-                    font-size: 12px;
-                }
-                .copy-btn:hover {
-                    background-color: #45a049;
-                }
-                @media screen and (max-width: 600px) {
-                    .result-table th, .result-table td {
-                        font-size: 12px;
-                        padding: 8px;
-                    }
-                    .copy-btn {
-                        font-size: 10px;
-                        padding: 4px 8px;
-                    }
-                }
-            </style>
-            """, unsafe_allow_html=True)
 
-            # Mostrar tabla con botones de copiar
-            table_html = "<table class='result-table'><tr><th>🔗 URL</th><th>👤 Usuario</th><th>🔑 Contraseña</th></tr>"
-            for cred in results:
-                table_html += f"""
-                <tr>
-                    <td>{cred['URL']}</td>
-                    <td>
-                        {cred['Usuario']}
-                        <button class='copy-btn' onclick="navigator.clipboard.writeText('{cred['Usuario']}')">📋 Copiar</button>
-                    </td>
-                    <td>
-                        {cred['Contraseña']}
-                        <button class='copy-btn' onclick="navigator.clipboard.writeText('{cred['Contraseña']}')">📋 Copiar</button>
-                    </td>
-                </tr>
-                """
-            table_html += "</table>"
+            # Convertir a DataFrame para mostrar en tabla interactiva
+            df = pd.DataFrame(results)
 
-            st.markdown(table_html, unsafe_allow_html=True)
+            # Mostrar la tabla con scroll horizontal
+            st.dataframe(df, use_container_width=True)
 
+            # Botones de copiar por cada fila
+            for index, row in df.iterrows():
+                col1, col2, col3 = st.columns([3, 2, 2])
+                with col1:
+                    st.write(f"🔗 {row['URL']}")
+                with col2:
+                    if st.button(f"📋 Copiar Usuario {index+1}", key=f"user_{index}"):
+                        copy_to_clipboard(row["Usuario"])
+                with col3:
+                    if st.button(f"📋 Copiar Contraseña {index+1}", key=f"pass_{index}"):
+                        copy_to_clipboard(row["Contraseña"])
         else:
             st.warning("⚠️ No se encontraron coincidencias.")
