@@ -20,18 +20,24 @@ def parse_lines(lines):
 # Configuración de la aplicación
 st.title("Buscador de credenciales en TXT")
 
-# JavaScript para copiar al portapapeles
-st.markdown("""
-<script>
-function copyToClipboard(text) {
-    navigator.clipboard.writeText(text).then(function() {
-        console.log('Texto copiado');
-    }).catch(function(err) {
-        console.error('Error al copiar texto: ', err);
-    });
-}
-</script>
-""", unsafe_allow_html=True)
+# Componente para manejar el copiado
+def create_copy_button(text, button_label="Copiar"):
+    button_id = f"copy_button_{hash(text)}"
+    return f'''
+        <div style="display: inline-block;">
+            <span>{text}</span>
+            <button 
+                id="{button_id}"
+                onclick="
+                    navigator.clipboard.writeText('{text}');
+                    document.getElementById('{button_id}').innerText='¡Copiado!';
+                    setTimeout(() => document.getElementById('{button_id}').innerText='Copiar', 1000)
+                "
+                style="margin-left: 10px; padding: 2px 8px; cursor: pointer; background-color: #4CAF50; color: white; border: none; border-radius: 3px;">
+                {button_label}
+            </button>
+        </div>
+    '''
 
 # Subir archivo .txt
 uploaded_file = st.file_uploader("Sube un archivo .txt con las credenciales", type="txt")
@@ -52,25 +58,16 @@ if uploaded_file:
             st.success(f"Se encontraron {len(results)} coincidencias:")
             
             # Mostrar resultados con botones de copiar
-            for idx, cred in enumerate(results):
+            for idx, cred in enumerate(results, 1):
                 st.markdown(f"""
-                <div style="border: 1px solid #ddd; padding: 10px; margin: 10px 0; border-radius: 5px;">
+                <div style="border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 5px; background-color: #f9f9f9;">
+                    <h3 style="margin-top: 0; color: #333;">Resultado #{idx}</h3>
                     <p><strong>URL:</strong> {cred['URL']}</p>
                     <p>
-                        <strong>Usuario:</strong> {cred['Usuario']}
-                        <button 
-                            onclick="copyToClipboard('{cred['Usuario']}')"
-                            style="margin-left: 10px; padding: 2px 8px; cursor: pointer;">
-                            Copiar
-                        </button>
+                        <strong>Usuario:</strong> {create_copy_button(cred['Usuario'])}
                     </p>
                     <p>
-                        <strong>Contraseña:</strong> {cred['Contraseña']}
-                        <button 
-                            onclick="copyToClipboard('{cred['Contraseña']}')"
-                            style="margin-left: 10px; padding: 2px 8px; cursor: pointer;">
-                            Copiar
-                        </button>
+                        <strong>Contraseña:</strong> {create_copy_button(cred['Contraseña'])}
                     </p>
                 </div>
                 """, unsafe_allow_html=True)
