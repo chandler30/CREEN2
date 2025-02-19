@@ -1,5 +1,4 @@
 import streamlit as st
-import pyperclip
 
 def parse_lines(lines):
     """Parsea las líneas del archivo y devuelve una lista de diccionarios con URL, usuario y contraseña."""
@@ -21,6 +20,21 @@ def parse_lines(lines):
 # Configuración de la aplicación
 st.title("Buscador de credenciales en TXT")
 
+# JavaScript para copiar al portapapeles
+st.markdown("""
+<script>
+async function copyToClipboard(text) {
+    try {
+        await navigator.clipboard.writeText(text);
+        return true;
+    } catch (err) {
+        console.error('Error al copiar: ', err);
+        return false;
+    }
+}
+</script>
+""", unsafe_allow_html=True)
+
 # Subir archivo .txt
 uploaded_file = st.file_uploader("Sube un archivo .txt con las credenciales", type="txt")
 
@@ -39,31 +53,28 @@ if uploaded_file:
         if results:
             st.success(f"Se encontraron {len(results)} coincidencias:")
             
-            # Mostrar resultados con botones de copiar
             for idx, cred in enumerate(results, 1):
-                st.markdown(f"### Resultado #{idx}")
-                st.write(f"**URL:** {cred['URL']}")
-                
-                # Usuario con botón de copiar
-                col1, col2 = st.columns([3, 1])
-                with col1:
-                    st.write(f"**Usuario:** {cred['Usuario']}")
-                with col2:
-                    if st.button(f"Copiar Usuario #{idx}"):
-                        st.session_state[f'copy_user_{idx}'] = True
-                        pyperclip.copy(cred['Usuario'])
-                        st.success("¡Usuario copiado!")
-                
-                # Contraseña con botón de copiar
-                col3, col4 = st.columns([3, 1])
-                with col3:
-                    st.write(f"**Contraseña:** {cred['Contraseña']}")
-                with col4:
-                    if st.button(f"Copiar Contraseña #{idx}"):
-                        st.session_state[f'copy_pass_{idx}'] = True
-                        pyperclip.copy(cred['Contraseña'])
-                        st.success("¡Contraseña copiada!")
-                
-                st.markdown("---")
+                st.markdown(f"""
+                <div style='padding: 10px; border: 1px solid #ccc; border-radius: 5px; margin: 10px 0;'>
+                    <h3>Resultado #{idx}</h3>
+                    <p><strong>URL:</strong> {cred['URL']}</p>
+                    <div style='display: flex; align-items: center; margin: 5px 0;'>
+                        <strong>Usuario:</strong>
+                        <input type='text' value='{cred['Usuario']}' readonly style='margin: 0 10px; padding: 5px; border: 1px solid #ddd;'>
+                        <button onclick='copyToClipboard("{cred['Usuario']}")' 
+                                style='padding: 5px 10px; background-color: #4CAF50; color: white; border: none; border-radius: 3px; cursor: pointer;'>
+                            Copiar
+                        </button>
+                    </div>
+                    <div style='display: flex; align-items: center; margin: 5px 0;'>
+                        <strong>Contraseña:</strong>
+                        <input type='text' value='{cred['Contraseña']}' readonly style='margin: 0 10px; padding: 5px; border: 1px solid #ddd;'>
+                        <button onclick='copyToClipboard("{cred['Contraseña']}")' 
+                                style='padding: 5px 10px; background-color: #4CAF50; color: white; border: none; border-radius: 3px; cursor: pointer;'>
+                            Copiar
+                        </button>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
         else:
             st.warning("No se encontraron coincidencias.")
