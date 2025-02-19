@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 
-# Función para parsear las líneas del archivo
 def parse_lines(lines):
     data = []
     for line in lines:
@@ -12,22 +11,68 @@ def parse_lines(lines):
             parts = line.split("|")
         else:
             continue
-
         if len(parts) == 3:
             url, user, password = parts
             data.append({"URL": url, "Usuario": user, "Contraseña": password})
-    
     return data
 
-# Función para generar un botón de copiar con JavaScript
+# Función mejorada para generar un botón de copiar con JavaScript y CSS responsive
 def copy_button(text, label):
     return f"""
-    <button onclick="navigator.clipboard.writeText('{text}')" 
-    style="background-color: #4CAF50; color: white; border: none; padding: 5px 10px; 
-    cursor: pointer; font-size: 14px; margin-left: 10px;">
+    <button onclick="navigator.clipboard.writeText('{text}')"
+    style="background-color: #4CAF50; 
+           color: white; 
+           border: none; 
+           padding: 5px 10px; 
+           border-radius: 4px;
+           cursor: pointer; 
+           font-size: 12px; 
+           margin: 2px 0;
+           white-space: nowrap;
+           display: inline-block;">
         📋 {label}
     </button>
     """
+
+# CSS personalizado para mejorar la responsividad
+st.markdown("""
+<style>
+    .credential-box {
+        border: 1px solid #ddd;
+        padding: 10px;
+        margin-bottom: 10px;
+        border-radius: 5px;
+        background-color: white;
+        word-wrap: break-word;
+    }
+    .credential-item {
+        margin: 5px 0;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+    }
+    .credential-label {
+        font-weight: bold;
+        margin-right: 5px;
+        white-space: nowrap;
+    }
+    .credential-value {
+        word-break: break-all;
+        flex: 1;
+        min-width: 150px;
+    }
+    @media (max-width: 640px) {
+        .credential-item {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        .credential-value {
+            width: 100%;
+        }
+    }
+</style>
+""", unsafe_allow_html=True)
 
 # Configuración de la aplicación
 st.set_page_config(page_title="Buscador de Credenciales", layout="wide")
@@ -40,31 +85,36 @@ if uploaded_file:
     # Leer y procesar el archivo
     content = uploaded_file.read().decode("utf-8").split("\n")
     credentials = parse_lines(content)
-
+    
     # Entrada para buscar URL
     search_url = st.text_input("🔗 Ingresa la URL a buscar:")
-
+    
     if search_url:
         # Filtrar coincidencias
-        results = [cred for cred in credentials if search_url in cred["URL"]]
-
+        results = [cred for cred in credentials if search_url.lower() in cred["URL"].lower()]
+        
         if results:
             st.success(f"✅ Se encontraron {len(results)} coincidencias:")
-
-            # Convertir a DataFrame para mostrar en tabla interactiva
-            df = pd.DataFrame(results)
-
-            # Mostrar la tabla con botones de copiar
-            for index, row in df.iterrows():
-                st.markdown(
-                    f"""
-                    <div style="border: 1px solid #ddd; padding: 10px; margin-bottom: 5px; border-radius: 5px;">
-                        <strong>🔗 URL:</strong> {row["URL"]}<br>
-                        <strong>👤 Usuario:</strong> {row["Usuario"]} {copy_button(row["Usuario"], "Copiar Usuario")}<br>
-                        <strong>🔑 Contraseña:</strong> {row["Contraseña"]} {copy_button(row["Contraseña"], "Copiar Contraseña")}
+            
+            # Mostrar cada resultado en un contenedor responsive
+            for cred in results:
+                st.markdown(f"""
+                    <div class="credential-box">
+                        <div class="credential-item">
+                            <span class="credential-label">🔗 URL:</span>
+                            <span class="credential-value">{cred["URL"]}</span>
+                        </div>
+                        <div class="credential-item">
+                            <span class="credential-label">👤 Usuario:</span>
+                            <span class="credential-value">{cred["Usuario"]}</span>
+                            {copy_button(cred["Usuario"], "Copiar")}
+                        </div>
+                        <div class="credential-item">
+                            <span class="credential-label">🔑 Contraseña:</span>
+                            <span class="credential-value">{cred["Contraseña"]}</span>
+                            {copy_button(cred["Contraseña"], "Copiar")}
+                        </div>
                     </div>
-                    """,
-                    unsafe_allow_html=True
-                )
+                """, unsafe_allow_html=True)
         else:
             st.warning("⚠️ No se encontraron coincidencias.")
