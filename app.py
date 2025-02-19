@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import pyperclip  # Para copiar al portapapeles
 
 # Función para parsear las líneas del archivo
 def parse_lines(lines):
@@ -20,10 +19,15 @@ def parse_lines(lines):
     
     return data
 
-# Función para copiar texto al portapapeles
-def copy_to_clipboard(text):
-    pyperclip.copy(text)
-    st.toast(f"Copiado: {text}")
+# Función para generar un botón de copiar con JavaScript
+def copy_button(text, label):
+    return f"""
+    <button onclick="navigator.clipboard.writeText('{text}')" 
+    style="background-color: #4CAF50; color: white; border: none; padding: 5px 10px; 
+    cursor: pointer; font-size: 14px; margin-left: 10px;">
+        📋 {label}
+    </button>
+    """
 
 # Configuración de la aplicación
 st.set_page_config(page_title="Buscador de Credenciales", layout="wide")
@@ -50,19 +54,17 @@ if uploaded_file:
             # Convertir a DataFrame para mostrar en tabla interactiva
             df = pd.DataFrame(results)
 
-            # Mostrar la tabla con scroll horizontal
-            st.dataframe(df, use_container_width=True)
-
-            # Botones de copiar por cada fila
+            # Mostrar la tabla con botones de copiar
             for index, row in df.iterrows():
-                col1, col2, col3 = st.columns([3, 2, 2])
-                with col1:
-                    st.write(f"🔗 {row['URL']}")
-                with col2:
-                    if st.button(f"📋 Copiar Usuario {index+1}", key=f"user_{index}"):
-                        copy_to_clipboard(row["Usuario"])
-                with col3:
-                    if st.button(f"📋 Copiar Contraseña {index+1}", key=f"pass_{index}"):
-                        copy_to_clipboard(row["Contraseña"])
+                st.markdown(
+                    f"""
+                    <div style="border: 1px solid #ddd; padding: 10px; margin-bottom: 5px; border-radius: 5px;">
+                        <strong>🔗 URL:</strong> {row["URL"]}<br>
+                        <strong>👤 Usuario:</strong> {row["Usuario"]} {copy_button(row["Usuario"], "Copiar Usuario")}<br>
+                        <strong>🔑 Contraseña:</strong> {row["Contraseña"]} {copy_button(row["Contraseña"], "Copiar Contraseña")}
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
         else:
             st.warning("⚠️ No se encontraron coincidencias.")
