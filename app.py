@@ -20,21 +20,6 @@ def parse_lines(lines):
 # Configuración de la aplicación
 st.title("Buscador de credenciales en TXT")
 
-# JavaScript para copiar al portapapeles
-st.markdown("""
-<script>
-async function copyToClipboard(text) {
-    try {
-        await navigator.clipboard.writeText(text);
-        return true;
-    } catch (err) {
-        console.error('Error al copiar: ', err);
-        return false;
-    }
-}
-</script>
-""", unsafe_allow_html=True)
-
 # Subir archivo .txt
 uploaded_file = st.file_uploader("Sube un archivo .txt con las credenciales", type="txt")
 
@@ -54,27 +39,29 @@ if uploaded_file:
             st.success(f"Se encontraron {len(results)} coincidencias:")
             
             for idx, cred in enumerate(results, 1):
-                st.markdown(f"""
-                <div style='padding: 10px; border: 1px solid #ccc; border-radius: 5px; margin: 10px 0;'>
-                    <h3>Resultado #{idx}</h3>
-                    <p><strong>URL:</strong> {cred['URL']}</p>
-                    <div style='display: flex; align-items: center; margin: 5px 0;'>
-                        <strong>Usuario:</strong>
-                        <input type='text' value='{cred['Usuario']}' readonly style='margin: 0 10px; padding: 5px; border: 1px solid #ddd;'>
-                        <button onclick='copyToClipboard("{cred['Usuario']}")' 
-                                style='padding: 5px 10px; background-color: #4CAF50; color: white; border: none; border-radius: 3px; cursor: pointer;'>
-                            Copiar
-                        </button>
-                    </div>
-                    <div style='display: flex; align-items: center; margin: 5px 0;'>
-                        <strong>Contraseña:</strong>
-                        <input type='text' value='{cred['Contraseña']}' readonly style='margin: 0 10px; padding: 5px; border: 1px solid #ddd;'>
-                        <button onclick='copyToClipboard("{cred['Contraseña']}")' 
-                                style='padding: 5px 10px; background-color: #4CAF50; color: white; border: none; border-radius: 3px; cursor: pointer;'>
-                            Copiar
-                        </button>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
+                st.markdown(f"### Resultado #{idx}")
+                st.write(f"**URL:** {cred['URL']}")
+                
+                # Contenedor para usuario
+                st.write("**Usuario:**")
+                col1, col2 = st.columns([3,1])
+                with col1:
+                    st.text_input("", value=cred['Usuario'], key=f"user_{idx}", disabled=True)
+                with col2:
+                    if st.button("📋 Copiar", key=f"copy_user_{idx}"):
+                        st.write("Usuario copiado! 👇")
+                        st.code(cred['Usuario'])
+                
+                # Contenedor para contraseña
+                st.write("**Contraseña:**")
+                col3, col4 = st.columns([3,1])
+                with col3:
+                    st.text_input("", value=cred['Contraseña'], key=f"pass_{idx}", disabled=True)
+                with col4:
+                    if st.button("📋 Copiar", key=f"copy_pass_{idx}"):
+                        st.write("Contraseña copiada! 👇")
+                        st.code(cred['Contraseña'])
+                
+                st.markdown("---")
         else:
             st.warning("No se encontraron coincidencias.")
