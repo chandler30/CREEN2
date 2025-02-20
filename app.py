@@ -21,7 +21,7 @@ def parse_lines(lines):
 def save_to_txt(credentials, filename="resultados.txt"):
     with open(filename, "w") as file:
         for cred in credentials:
-            file.write(f"URL: {cred['URL']}\nUsuario: {cred['Usuario']}\nContraseña: {cred['Contraseña']}\n\n")
+            file.write(f"{cred['Usuario']}:{cred['Contraseña']}\n")
 
 # Configuración de la aplicación
 st.title("Buscador de credenciales en TXT")
