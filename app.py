@@ -10,6 +10,8 @@ def parse_lines(lines):
             parts = line.split(";")
         elif "|" in line:
             parts = line.split("|")
+        elif ":" in line:
+            parts = line.split(":")
         else:
             continue
         if len(parts) == 3:
